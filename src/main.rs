@@ -1,75 +1,57 @@
-use std::fs::{File, OpenOptions};
-use std::io;
-use std::io::{Write};
+mod cli;
+
+use cli::command::Command;
+use cli::file_ops::*;
+use cli::utils::*;
 use colored::*;
-fn main() -> std::io::Result<()> {
-    let mut user_input = String::new();
+use std::io;
 
-    println!("{}", "***** Welcome to TODO CLI *****".bright_blue().bold());
-    println!("{}", "1. Create File".yellow());
-    println!("{}", "2. Write on a file".yellow());
-    println!("{}", "3. Append on a file".yellow());
+fn main() -> io::Result<()> {
+    loop {
+        println!("{}", "***** Welcome to TODO CLI *****".bright_blue().bold());
+        println!("{}", "1. Create File".yellow());
+        println!("{}", "2. Write on a file".yellow());
+        println!("{}", "3. Append on a file".yellow());
+        println!("{}", "4. Exit".red());
 
-    io::stdin().read_line(&mut user_input).expect("Failed to process!");
+        let choice = read_line("Enter your choice: ")?;
+        let choice_num = choice.trim().parse::<u32>().unwrap_or(0);
 
-    match user_input.trim().parse().expect("Invalid integer") {
-        1 =>{
-        println!("You have selected file creation");
-        let mut file_name = String::new();
-        println!("Enter your file name:");
-        io::stdin().read_line(&mut file_name).expect("Invalid");
-        file_create(&file_name.trim())?;
-        },    
-        2 => {
-        println!("You have selected write on a file");
+        let command = match choice_num {
+            1 => {
+                let file_name = read_line("Enter file name: ")?;
+                Command::CreateFile(file_name)
+            }
+            2 => {
+                let file_name = read_line("Enter file name: ")?;
+                let content = read_multiline_input("Enter content to write (finish with empty line):")?;
+                Command::WriteFile(file_name, content)
+            }
+            3 => {
+                let file_name = read_line("Enter file name: ")?;
+                let content = read_multiline_input("Enter content to append (finish with empty line):")?;
+                Command::AppendFile(file_name, content)
+            }
+            4 => break,
+            _ => Command::Invalid,
+        };
 
-        let mut file_name = String::new();
-        println!("{}",file_name);
-        println!("Enter your file name:");
-        io::stdin().read_line(&mut file_name).expect("Invalid");
-        
-        let mut content = String::new();
-        println!("Enter your file content to write:");
-        io::stdin().read_line(&mut content).expect("Invalid");
-
-        let mut file = File::create(file_name.trim())?;
-        file_write(&(content + "\n"), &mut file)?;
-
-        },
-        3 => {
-        println!("You have selected append on a file");
-        let mut file_name = String::new();
-        println!("Enter your file name:");
-        io::stdin().read_line(&mut file_name).expect("Invalid");
-        
-        let mut content = String::new();
-        println!("Enter your file content to append:");
-        io::stdin().read_line(&mut content).expect("Invalid");
-        file_append(&(content + "\n"), &file_name.trim())?;
-
+        match command {
+            Command::CreateFile(file_name) => {
+                file_create(&file_name)?;
+                println!("{}", "File created successfully!".green());
+            }
+            Command::WriteFile(file_name, content) => {
+                file_write(&file_name, &content)?;
+                println!("{}", "File written successfully!".green());
+            }
+            Command::AppendFile(file_name, content) => {
+                file_append(&file_name, &content)?;
+                println!("{}", "Content appended successfully!".green());
+            }
+            Command::Invalid => println!("{}", "Invalid choice!".red()),
         }
-        _=> println!("Invalid response"),
     }
-    
+
     Ok(())
-}
-
-fn file_create(file_name: &str) -> std::io::Result<File> {
-    let file = File::create(file_name)?;
-    Ok(file)
-}
-
-fn file_write(content: &str, file: &mut File) -> std::io::Result<()> {
-    file.write_all(content.as_bytes())?;
-    Ok(())
-}
-
-fn file_append(content: &str,file: &str) -> std::io::Result<()>
-{
-    let mut file_to_append = OpenOptions::new()
-    .create(false)
-    .append(true)
-    .open(file)?;
-
-    file_write(content, &mut file_to_append)
 }
